@@ -1,4 +1,4 @@
-# Music Production Toolkit 3.1.2 for ComfyUI
+# Music Production Toolkit 3.1.3 for ComfyUI
 
 <p align="center">
   <img src="assets/branding/banner.png" alt="Music Production Toolkit for ComfyUI — YuE2, YuE2 Cover and MiniMax Music 3" width="100%" />
@@ -85,7 +85,7 @@ the main workflow handles YuE2, YuE2 Cover and MiniMax Music 3, and the
 audio-enhancement workflow carries every restoration and mastering stage of the
 main one plus your original file's own tags and cover art.
 
-[What's new in 3.1.2](RELEASE_NOTES_v3.1.2.md) · [Complete workflow guide](docs/WORKFLOW.md) ·
+[What's new in 3.1.3](RELEASE_NOTES_v3.1.3.md) · [Complete workflow guide](docs/WORKFLOW.md) ·
 [Installation](INSTALLATION.md)
 
 ## What the toolkit does
@@ -129,27 +129,28 @@ to enhance and master the recording you already have.
 
 Created by [Johannes Plenio](https://github.com/jplenio).
 
-## What's new in 3.1.2
+## What's new in 3.1.3
 
-Better help at setup time, fewer things to configure, and a run you can watch:
+The model list says what you already have, and the expensive stage ships off:
 
-- **The toolkit now assesses your PC and says which models suit it.** It reads CPU,
-  RAM and the class of your graphics card, and reports per task which file fits — with
-  a 1–5 star rating for the job it does and, when your first choice is too large, the
-  smaller alternative that fits. The same list is in the
-  [README table below](#what-to-expect-from-your-pc) and in
-  [installation](INSTALLATION.md). **Selected models download themselves** — Whisper
-  and the language model fetch exactly what you picked, and nothing arrives unasked.
-- **The language-model settings are entered once.** Set provider, model, context and
-  sampler values in the new `LLM settings · central` node and connect it to every LLM
-  call; each call keeps only what is specific to it.
-- **Better logging.** Long stages draw the same progress bar ComfyUI's own nodes draw —
-  one line that updates in place with the count, the elapsed time, the remaining time
-  and the rate (`LLM streaming: 8%|# | 1958/24576 [01:15<14:24, 26.1token/s]`) — and a
-  refinement stage whose model is missing switches itself off with a log line instead
-  of ending the run.
+- **The model dropdown marks every entry** — `✔` for a file already in `models/llm`,
+  `⬇` with download size and rating for a catalog model the first run fetches — and the
+  slot line reads `Model - 3 installed, 16 to download`. The stored value stays the plain
+  file name, so an existing workflow keeps loading. **Six more chat models** came with it
+  (Gemma 4 26B, Gemma 4 E4B and the fast LFM2.5 line), and `Qwen_Qwen3.5-9B-Q4_K_M.gguf`
+  is the default in every LLM node now: 6.2 GiB, fits an 8–12 GiB card as well as a
+  larger one, and fetches itself on the first run.
+- **The restoration chain ships off in both example workflows.** FlashSR costs 2.3 GB of
+  weights on first use and minutes per song, so the PRE low-pass is bypassed and the
+  crossover stands at `Original SRC only`; switching the chain on means switching its
+  helpers on as well. The FlashSR stage also lost its own `auto_download` switch — a stage
+  that runs fetches what it needs, and a fetch that fails skips the stage instead of
+  ending the run.
+- **Fixed:** a chat model picked from the catalog could not download itself
+  (`entry has no target directory`), and the LLM check in the model check node is on by
+  default again.
 
-Details: [release notes 3.1.2](RELEASE_NOTES_v3.1.2.md).
+Details: [release notes 3.1.3](RELEASE_NOTES_v3.1.3.md).
 
 **The cover feature in detail.** *Cover song · source audio* has a
 **Cover lyrics** setting with three modes, and the choice reaches the score node,
@@ -293,7 +294,10 @@ session-ID node. In cloud mode, each new request may incur API charges. The main
 workflow's three LLM calls share one configuration: set the provider, the model
 and the sampler values in **LLM settings · central** and connect it to every LLM
 chat node. Integrated GGUFs listed in the model dropdown download on first use,
-so a model does not have to be fetched by hand before it can be selected.
+so a model does not have to be fetched by hand before it can be selected. The
+default is `Qwen_Qwen3.5-9B-Q4_K_M.gguf` (6.2 GiB, ★★★★☆) — a size that suits an
+8–12 GiB card as well as a larger one, and it fetches itself on the first run if
+it is not installed yet.
 
 Not sure which model your PC should use? Add the **Model advisor** node: it reads
 the detected hardware, reports per task which file fits (with the free memory and
@@ -397,16 +401,19 @@ little memory), and the speed column is an estimate from the model class, the st
 and the context this toolkit uses. This project has not benchmarked those on real
 hardware yet — the measurement matrix in `tests/fixtures/benchmark_matrix.json` still says
 *untested*. For what is possible on *your* machine, add the **Model advisor** node: it
-reports the memory it detected and which file fits it.
+reports the memory it detected and which file fits it. In the LLM node's model dropdown,
+`✔` marks a file that is already in `models/llm` and `⬇` a catalog model that would be
+downloaded on first use, together with its size and rating — the stored value stays the
+plain file name, so a saved workflow keeps working after that download.
 
 | Your PC | Music generation | Language model | Lyrics (Whisper) | Cover artwork | Speed to expect |
 |---|---|---|---|---|---|
-| **CPU only** | not practical | `Qwen3.5-2B` 1.2 GiB ★★ / `Qwen3.5-4B` 2.6 GiB ★★★ | `whisper-large-v3-turbo-int8` 0.8 GiB ★★★ | switch **Cover** off | Caption/lyrics: minutes per answer. Whisper: minutes to tens of minutes per song. Generation and artwork: not in interactive time. |
-| **6–8 GiB VRAM** | `yue2_3b_int8` 3.7 GiB ★★★★ (MiniMax needs its 8.6 GiB encoder offloaded) | `Qwen3.5-9B-Q4_K_M` 6.2 GiB ★★★★ / `Qwen3.5-4B` 2.6 GiB ★★★ | `whisper-large-v3-turbo` 1.5 GiB ★★★★ | `fp8` diffusion + `fp4` encoder (7.4 GiB together) ★★★★ — tight | Song: minutes. Text: ~10–60 s per answer. Artwork: seconds to a minute. |
+| **CPU only** | not practical | `Qwen3.5-2B` 1.2 GiB ★★ / `Qwen3.5-4B` 2.6 GiB ★★★ / `LFM2.5-2.6B` 1.6 GiB ★★★ (fastest) | `whisper-large-v3-turbo-int8` 0.8 GiB ★★★ | switch **Cover** off | Caption/lyrics: minutes per answer. Whisper: minutes to tens of minutes per song. Generation and artwork: not in interactive time. |
+| **6–8 GiB VRAM** | `yue2_3b_int8` 3.7 GiB ★★★★ (MiniMax needs its 8.6 GiB encoder offloaded) | `Qwen3.5-9B-Q4_K_M` 6.2 GiB ★★★★ / `gemma-4-E4B` 4.8 GiB ★★★★ / `Qwen3.5-4B` 2.6 GiB ★★★ | `whisper-large-v3-turbo` 1.5 GiB ★★★★ | `fp8` diffusion + `fp4` encoder (7.4 GiB together) ★★★★ — tight | Song: minutes. Text: ~10–60 s per answer. Artwork: seconds to a minute. |
 | **10–12 GiB VRAM** | `minimax_music3_dit_int8` ★★★★ + int8 encoder (offload) / `yue2_3b_int8` | `gemma-4-12b-it-qat` 7.0 GiB ★★★★★ or `Qwen3.8-9B` ★★★★ | `whisper-large-v3` 2.9 GiB ★★★★★ | `fp8` + `fp4` comfortable; bf16 pair too large together | As above, with more headroom for context. |
-| **16 GiB VRAM** | `minimax_music3_dit_fp16` + int8 encoder (13.3 GiB together) / YuE2 bf16 7.3 GiB ★★★★★ | `gemma-4-12b-it-qat` ★★★★★ or `Qwen3.8-27B-UD-IQ3_XXS` 10.9 GiB ★★★★ | `whisper-large-v3` ★★★★★ | bf16 pair (15.0 GiB) with offload, or `fp8`+`fp4` relaxed | Song: minutes. Text: up to ~1 min per answer with a 27B model. |
-| **24 GiB VRAM** | MiniMax fp16 DiT + int8 encoder comfortable; YuE2 bf16 + SheetSage2 | `Qwen3.8-27B-UD-IQ4_XS` 14.3 GiB ★★★★★ | `whisper-large-v3` with batching ★★★★★ | bf16 pair ★★★★★ | Everything at full speed; the LLM is the slowest stage. |
-| **32 GiB+ VRAM** | any catalog variant, fp32 DiT optional ★★ | `Qwen3.8-27B-UD-Q4_K_M` 16.5 GiB ★★★★ | `whisper-large-v3` ★★★★★ | bf16 ★★★★★ | As above; split across GPUs only helps when measured. |
+| **16 GiB VRAM** | `minimax_music3_dit_fp16` + int8 encoder (13.3 GiB together) / YuE2 bf16 7.3 GiB ★★★★★ | `gemma-4-12b-it-qat` ★★★★★, `Qwen3.8-27B-UD-IQ3_XXS` 10.9 GiB ★★★★ or `gemma-4-26B` QAT 13.5 GiB ★★★★★ (MoE, ~4B active) | `whisper-large-v3` ★★★★★ | bf16 pair (15.0 GiB) with offload, or `fp8`+`fp4` relaxed | Song: minutes. Text: up to ~1 min per answer with a 27B model. |
+| **24 GiB VRAM** | MiniMax fp16 DiT + int8 encoder comfortable; YuE2 bf16 + SheetSage2 | `Qwen3.8-27B-UD-IQ4_XS` 14.3 GiB ★★★★★ or `gemma-4-26B` QAT 13.5 GiB ★★★★★ | `whisper-large-v3` with batching ★★★★★ | bf16 pair ★★★★★ | Everything at full speed; the LLM is the slowest stage. |
+| **32 GiB+ VRAM** | any catalog variant, fp32 DiT optional ★★ | `Qwen3.8-27B-UD-Q4_K_M` 16.5 GiB ★★★★ / `gemma-4-26B-A4B` UD-Q5_K_M 19.7 GiB ★★★★ | `whisper-large-v3` ★★★★★ | bf16 ★★★★★ | As above; split across GPUs only helps when measured. |
 
 The same information per stage, with the reasoning:
 
@@ -418,7 +425,10 @@ The same information per stage, with the reasoning:
 - **Language model** — the prompt is up to ~11.6k tokens and the answer up to ~2k, so the
   prefilling dominates. A cloud provider is the fastest option and needs no local memory;
   among local models the class 9–12B is the usual sweet spot, and the 27B entries are for
-  quality comparisons, not for speed.
+  quality comparisons, not for speed. The 26B Gemma 4 and the LFM2.5 entries extend the
+  range in both directions: the first is the quality end that still fits 16 GiB, the second
+  the fast end (an 8B mixture-of-experts with ~1B active parameters, and a small dense pair
+  for CPU runs).
 - **Whisper** — only cover runs with lyrics need it, and only once per run. large-v3 is the
   most accurate for sung, mixed and multilingual material; the turbo variants are roughly
   half the size and faster with a small quality cost on dense mixes. Its int8 quantization
@@ -500,6 +510,7 @@ See [installation](INSTALLATION.md) and [troubleshooting](TROUBLESHOOTING.md).
 
 ## Documentation
 
+- [Release 3.1.3 notes](RELEASE_NOTES_v3.1.3.md)
 - [Release 3.1.2 notes](RELEASE_NOTES_v3.1.2.md)
 - [Release 3.1.1 notes](RELEASE_NOTES_v3.1.1.md)
 - [Release 3.1.0 notes](RELEASE_NOTES_v3.1.0.md)

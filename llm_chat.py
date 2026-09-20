@@ -44,13 +44,19 @@ from .model_downloader import (
     normalize_model_entries,
     resolve_entry_url,
     resolve_target,
+    stars,
 )
 from .toolkit_logging import get_logger
 
 LOGGER = get_logger("llm")
 
 GGUF_SUFFIX = ".gguf"
-EXAMPLE_MODEL_NAME = "Qwen3.8-27B-UD-IQ3_XXS.gguf"
+# The model the bundled workflow ships with, and therefore the default in both LLM nodes
+# (the central settings node derives its widgets from the chat node, so one name covers
+# both).  A 9B Q4_K_M fits an 8-12 GiB card as well as a larger one, is the catalog's
+# everyday candidate for this workload (★★★★☆), and is downloaded on first use when it is
+# not installed yet - which is why the default may name a file that is not on disk.
+EXAMPLE_MODEL_NAME = "Qwen_Qwen3.5-9B-Q4_K_M.gguf"
 PLACEHOLDER_MODEL = "(no GGUF model found in models/llm)"
 
 # The Qwen-style GGUF separates its reasoning into <think>...</think> tags
@@ -405,6 +411,41 @@ def group_gguf_files(names: List[str]) -> Dict[str, Any]:
     }
 
 
+def _scanned_llm_files() -> "OrderedDict[str, Optional[int]]":
+    """Every ``*.gguf`` in the LLM search path, in scan order, with its size.
+
+    Ordered, because the dropdown lists installed files first and the scan order is
+    what makes that listing stable between runs.  A file that disappears between the
+    listing and the ``stat`` call keeps ``None`` as its size instead of raising.
+    """
+    found: "OrderedDict[str, Optional[int]]" = OrderedDict()
+    for directory in _llm_search_directories():
+        if not directory.is_dir():
+            continue
+        for path in sorted(directory.glob(f"*{GGUF_SUFFIX}")):
+            if path.name in found:
+                continue
+            try:
+                found[path.name] = path.stat().st_size
+            except OSError:  # pragma: no cover - race with a delete
+                found[path.name] = None
+    return found
+
+
+def _offered_llm_names(found) -> List[str]:
+    """The scanned names that are chat models - no projectors, no trailing shards."""
+    grouped = group_gguf_files(list(found))
+    offered = set(grouped["models"]) | {entry["name"] for entry in grouped["split_models"]}
+    return [name for name in found if name in offered]
+
+
+def installed_llm_models() -> Dict[str, Optional[int]]:
+    """The GGUF chat models that are on disk right now: ``{name: size in bytes}``."""
+    found = _scanned_llm_files()
+    offered = set(_offered_llm_names(found))
+    return {name: size for name, size in found.items() if name in offered}
+
+
 def list_llm_models() -> List[str]:
     """Chat models available in the ComfyUI models/llm folders.
 
@@ -413,25 +454,68 @@ def list_llm_models() -> List[str]:
     shard.  Manually installed files are kept - they are only classified, never
     renamed or moved.
     """
-    names: List[str] = []
-    seen = set()
-    for directory in _llm_search_directories():
-        if not directory.is_dir():
-            continue
-        for path in sorted(directory.glob(f"*{GGUF_SUFFIX}")):
-            if path.name not in seen:
-                seen.add(path.name)
-                names.append(path.name)
-    grouped = group_gguf_files(names)
-    offered = set(grouped["models"]) | {entry["name"] for entry in grouped["split_models"]}
-    installed = [name for name in names if name in offered]
+    found = _scanned_llm_files()
+    installed = _offered_llm_names(found)
     # Catalog models that are not on disk yet are offered as well, after the installed
     # ones: without them the dropdown only lists files a user already has, so a model the
     # toolkit knows how to fetch could never be selected - which is exactly how "download
     # it yourself" became the only way in. The first use of a selected model downloads it.
     catalog = [entry.get("name") for entry in load_models_config().get("llm", {}).get("files", [])
-               if entry.get("name") and entry.get("name") not in seen]
+               if entry.get("name") and entry.get("name") not in found]
     return installed + catalog
+
+
+def _int_or_none(value: Any) -> Optional[int]:
+    """A catalog number as ``int``, or ``None`` when it is absent or unusable."""
+    try:
+        return int(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _llm_folder() -> str:
+    """The folder the catalog resolves LLM downloads into (for display)."""
+    llm = load_models_config().get("llm", {})
+    return str(llm.get("directory") or llm.get("target") or "") or "models/llm"
+
+
+def llm_model_inventory() -> Dict[str, Any]:
+    """What the model dropdown offers, and which of it is already downloaded.
+
+    The dropdown lists installed GGUFs *and* catalog candidates; selecting a candidate
+    downloads it on first use.  Without a marker the two look identical, so picking a
+    model could silently start a several-gigabyte transfer.  This payload is what the
+    node labels its entries with - and it only feeds the *display*: the widget value
+    stays the bare file name, so saved workflows and the loader keep working unchanged.
+    """
+    installed = installed_llm_models()
+    catalog: Dict[str, Dict[str, Any]] = {}
+    for entry in load_models_config().get("llm", {}).get("files", []):
+        if isinstance(entry, dict) and entry.get("name"):
+            catalog[str(entry["name"])] = entry
+    entries: List[Dict[str, Any]] = []
+    for name in list_llm_models():
+        catalog_entry = catalog.get(name) or {}
+        size = installed.get(name)
+        if size is None:
+            size = _int_or_none(catalog_entry.get("bytes"))
+        rating = _int_or_none(catalog_entry.get("rating"))
+        entries.append({
+            "name": name,
+            "installed": name in installed,
+            "bytes": size,
+            "gib": round(size / (1024 ** 3), 2) if size else None,
+            "rating": rating,
+            "stars": stars(rating),
+            "suits": [str(value) for value in (catalog_entry.get("suits") or [])],
+            "note": str(catalog_entry.get("rating_note") or ""),
+        })
+    return {
+        "folder": _llm_folder(),
+        "installed": sum(1 for entry in entries if entry["installed"]),
+        "available": sum(1 for entry in entries if not entry["installed"]),
+        "entries": entries,
+    }
 
 
 _ENVIRONMENT_LOGGED = False
@@ -557,16 +641,33 @@ def _find_model_path(name: str) -> Optional[Path]:
 
 
 def _configured_llm_entry(name: str) -> Optional[Dict[str, Any]]:
+    """The catalog entry for ``name``, with the folder it must be downloaded into.
+
+    The catalog names the LLM folder once, on the *group* (``directory``/``target``); a
+    per-file entry carries none of its own. The model check expands that when it
+    normalizes the group, but this loader reads the raw entry - and
+    :func:`~.model_downloader.check_file_entries` refuses an entry without a target
+    ("entry has no target directory"), which is exactly how a chosen catalog model failed
+    to download at all. The entry handed on here therefore carries the effective folder,
+    like the check's own entries do. ``models/llm`` is the fallback because that is where
+    the loader looks for the file afterwards (via ``folder_paths``).
+    """
     config = load_models_config()
     llm = config.get("llm", {})
+    directory = str(llm.get("directory") or llm.get("target") or "") or "models/llm"
     for entry in llm.get("files", []):
         if entry.get("name") == name:
             # The catalog marks these as "never fetched by the model check". Here the model
             # *was* chosen, so this is the place where it is fetched.
-            return {**entry, "no_auto_download": False}
+            resolved = {**entry, "no_auto_download": False}
+            resolved.setdefault("target", directory)
+            resolved["target"] = resolved.get("target") or directory
+            return resolved
     example = llm.get("example", {})
     if example.get("name") == name and resolve_entry_url(example):
-        return example
+        resolved = {**example}
+        resolved["target"] = resolved.get("target") or directory
+        return resolved
     return None
 
 
@@ -763,6 +864,13 @@ def _get_model(
         # Reading ``entry["url"]`` here was how a model the catalog *could* fetch stayed
         # a manual download.
         url = resolve_entry_url(entry) if entry else ""
+        if url and auto_download and not entry.get("target"):
+            # Defensive: without a folder the check refuses the entry, and "entry has no
+            # target directory" says nothing about which file or where to look.
+            raise RuntimeError(
+                f"LLM model '{model_name}' is listed in models_config.json but without a folder to "
+                "download it into; add a 'target' (or 'directory') to the llm group."
+            )
         if url and auto_download:
             report = check_file_entries([entry], base_path=None, auto_download=True)
             failed = [item for item in report if item["status"] == "failed"]

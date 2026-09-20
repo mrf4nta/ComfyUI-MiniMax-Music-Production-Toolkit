@@ -14,7 +14,9 @@ What is pinned here:
 * connecting the node does not shift the chat node's widget list, so a saved
   workflow's positional widget values keep their meaning;
 * a selected catalog model is fetched on first use, and the model check never
-  starts a multi-gigabyte download for candidates nobody picked.
+  starts a multi-gigabyte download for candidates nobody picked;
+* the model dropdown can say which of its entries are already on disk - the
+  inventory marks installed files and candidates without touching a widget value.
 """
 from __future__ import annotations
 
@@ -338,6 +340,37 @@ class CatalogDownloadTests(unittest.TestCase):
             self.assertEqual(item["status"], "missing", item)
             self.assertTrue(item["message"], f"{item['name']} must explain why nothing was fetched")
 
+    def test_a_selected_catalog_model_carries_the_group_folder(self):
+        """The catalog names the LLM folder on the *group*, not on each file.
+
+        The model check expands that when it normalizes the group; this loader reads the raw
+        entry. Handing that raw entry to the downloader produced "entry has no target
+        directory" - a chosen catalog model could not be downloaded at all, which is exactly
+        what a user hit after selecting a model in the LLM node.
+        """
+        name = self.catalog_entries()[0]["name"]
+        raw = next(e for e in self.catalog_entries() if e["name"] == name)
+        self.assertNotIn("target", raw, "the catalog entry itself carries no folder")
+        entry = llm_chat._configured_llm_entry(name)
+        self.assertEqual(entry.get("target"), "models/llm",
+                         "the loader must hand the downloader the effective folder")
+        report = downloader.check_file_entries([entry], base_path=None, auto_download=False)
+        self.assertNotIn("no target directory", report[0]["message"], report)
+        self.assertIn(report[0]["status"], ("present", "missing"))
+
+    def test_without_a_group_folder_the_documented_default_is_used(self):
+        # A hand-edited catalog that names no folder at all must still land where the loader
+        # looks for the file afterwards.
+        config = {"llm": {"files": [{"name": "x.gguf", "repo_id": "org/repo", "filename": "x.gguf",
+                                     "revision": "a" * 40, "bytes": 16, "no_auto_download": True}]}}
+        original = llm_chat.load_models_config
+        llm_chat.load_models_config = lambda: config
+        try:
+            entry = llm_chat._configured_llm_entry("x.gguf")
+        finally:
+            llm_chat.load_models_config = original
+        self.assertEqual(entry.get("target"), "models/llm")
+
     def test_a_selected_model_is_fetched_before_it_is_loaded(self):
         name = self.catalog_entries()[0]["name"]
         entry = llm_chat._configured_llm_entry(name)
@@ -378,6 +411,8 @@ class CatalogDownloadTests(unittest.TestCase):
         self.assertEqual(len(calls), 1, "the missing model must be fetched exactly once")
         self.assertTrue(calls[0]["auto_download"], "the fetch is what 'auto_download' means here")
         self.assertEqual([e["name"] for e in calls[0]["entries"]], [name])
+        self.assertEqual(calls[0]["entries"][0].get("target"), "models/llm",
+                         "the downloader refuses an entry without a folder")
         self.assertEqual(searched, [name, name], "the path is resolved again after the download")
         self.assertIn("llama.cpp was reached", str(caught.exception),
                       "the download must finish before the model is loaded")
@@ -405,6 +440,96 @@ class CatalogDownloadTests(unittest.TestCase):
             llm_chat._import_llama_cpp = original_import
         self.assertIn("auto-download is disabled", str(caught.exception))
         self.assertEqual(called, [])
+
+
+class ModelInventoryTests(unittest.TestCase):
+    """The dropdown lists installed files and catalog candidates in one list.
+
+    Which of the two an entry is, is not visible in the value itself - the value must stay
+    the bare file name, or a saved workflow would stop resolving once the file has been
+    downloaded. The inventory is therefore what the frontend labels the entries with, and
+    these tests pin both halves: what counts as installed, and that the payload covers
+    exactly the values the dropdown offers.
+    """
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.model_dir = Path(self._tmp.name) / "models" / "llm"
+        self.model_dir.mkdir(parents=True)
+        # Both the folder scan and the catalog targets are pinned, so the test reads this
+        # folder only - never the models/llm next to the checkout.
+        self._directories = llm_chat._llm_directories
+        self._catalog_directories = llm_chat._catalog_llm_directories
+        llm_chat._llm_directories = lambda: [self.model_dir]
+        llm_chat._catalog_llm_directories = lambda: []
+
+    def tearDown(self):
+        llm_chat._llm_directories = self._directories
+        llm_chat._catalog_llm_directories = self._catalog_directories
+        self._tmp.cleanup()
+
+    def catalog_names(self):
+        return [entry["name"] for entry in llm_chat.load_models_config()["llm"]["files"]]
+
+    def test_a_file_on_disk_is_marked_installed_with_its_real_size(self):
+        (self.model_dir / "mine.gguf").write_bytes(b"0" * 2048)
+        inventory = llm_chat.llm_model_inventory()
+        by_name = {entry["name"]: entry for entry in inventory["entries"]}
+        self.assertTrue(by_name["mine.gguf"]["installed"])
+        self.assertEqual(by_name["mine.gguf"]["bytes"], 2048,
+                         "an installed file is measured, not taken from the catalog")
+        self.assertEqual(inventory["installed"], 1)
+        self.assertEqual(inventory["available"], len(inventory["entries"]) - 1)
+
+    def test_a_catalog_candidate_is_marked_as_a_download_with_size_and_rating(self):
+        name = self.catalog_names()[0]
+        raw = next(e for e in llm_chat.load_models_config()["llm"]["files"] if e["name"] == name)
+        entry = next(e for e in llm_chat.llm_model_inventory()["entries"] if e["name"] == name)
+        self.assertFalse(entry["installed"], "nothing is on disk in this fixture")
+        self.assertEqual(entry["bytes"], int(raw["bytes"]), "the download size is the catalog size")
+        self.assertEqual(entry["gib"], round(int(raw["bytes"]) / (1024 ** 3), 2))
+        self.assertEqual(entry["stars"], downloader.stars(raw.get("rating")))
+        self.assertEqual(len(entry["stars"]), 5, "the frontend shows a fixed-width star row")
+        self.assertEqual(entry["suits"], list(raw.get("suits") or []))
+
+    def test_the_inventory_covers_exactly_the_offered_values(self):
+        # A value the dropdown offers but the inventory does not know would silently show
+        # no marker at all - the one case the mark is there to prevent.
+        (self.model_dir / "mine.gguf").write_bytes(b"0" * 16)
+        inventory = llm_chat.llm_model_inventory()
+        self.assertEqual([entry["name"] for entry in inventory["entries"]], llm_chat.list_llm_models())
+        self.assertEqual([entry["name"] for entry in inventory["entries"]][0], "mine.gguf",
+                         "installed files come first, as in the dropdown")
+
+    def test_projectors_and_shards_are_not_counted_as_installed_models(self):
+        (self.model_dir / "mmproj-vision.gguf").write_bytes(b"0" * 32)
+        (self.model_dir / "big-00001-of-00002.gguf").write_bytes(b"0" * 32)
+        (self.model_dir / "big-00002-of-00002.gguf").write_bytes(b"0" * 32)
+        inventory = llm_chat.llm_model_inventory()
+        names = [entry["name"] for entry in inventory["entries"]]
+        self.assertNotIn("mmproj-vision.gguf", names, "a projector is not a chat model")
+        self.assertEqual(names.count("big-00001-of-00002.gguf"), 1,
+                         "a split model appears once, under its first shard")
+        self.assertNotIn("big-00002-of-00002.gguf", names, "a trailing shard is not a model")
+        self.assertTrue(next(e for e in inventory["entries"] if e["name"] == "big-00001-of-00002.gguf")["installed"])
+
+    def test_an_empty_folder_reports_every_candidate_as_a_download(self):
+        inventory = llm_chat.llm_model_inventory()
+        self.assertEqual(inventory["installed"], 0)
+        self.assertEqual(inventory["available"], len(self.catalog_names()))
+        self.assertEqual(inventory["folder"], "models/llm",
+                         "the label has to name the folder the files belong in")
+        for entry in inventory["entries"]:
+            self.assertFalse(entry["installed"], entry)
+            self.assertTrue(entry["stars"], entry)
+
+    def test_an_unreadable_folder_is_reported_as_nothing_installed(self):
+        # A missing models/llm folder is a fresh install, not an error: the candidates are
+        # still listed, so the first model can be chosen and fetched.
+        self._tmp.cleanup()
+        inventory = llm_chat.llm_model_inventory()
+        self.assertEqual([entry["name"] for entry in inventory["entries"]], self.catalog_names())
+        self.assertEqual(inventory["installed"], 0)
 
 
 if __name__ == "__main__":  # pragma: no cover

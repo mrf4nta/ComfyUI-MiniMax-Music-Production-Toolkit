@@ -279,6 +279,27 @@ class ConfigurationRoutesTests(unittest.TestCase):
             self.assertEqual(response.status, 400)
             self.assertEqual(response.payload, {"error": "Cannot reach server"})
 
+    def test_the_model_inventory_route_serves_the_gguf_marks(self):
+        """The dropdown's install marks come from this route - and from nothing else."""
+        def inventory():
+            return asyncio.run(handlers[("GET", "/minimax_music_toolkit/llm/models")](object()))
+
+        response = inventory()
+        self.assertEqual(response.status, 200)
+        entries = response.payload["entries"]
+        self.assertEqual([entry["name"] for entry in entries], chat.list_llm_models(),
+                         "every value the dropdown offers must be in the inventory")
+        self.assertEqual(response.payload["installed"] + response.payload["available"], len(entries))
+        for entry in entries:
+            self.assertTrue(entry["stars"], entry)
+            self.assertIn("installed", entry)
+        # Without this payload the frontend shows plain file names - a failure has to be an
+        # error response (and still no traceback in the log).
+        with patch.object(chat, "llm_model_inventory", side_effect=RuntimeError("folder unreadable")):
+            failure = inventory()
+        self.assertEqual(failure.status, 500)
+        self.assertEqual(failure.payload, {"error": "RuntimeError: folder unreadable"})
+
 
 class PermanentKeyTests(unittest.TestCase):
     """The optional on-disk store behind "Keep API key after restart"."""
@@ -382,7 +403,11 @@ class CoverTests(unittest.TestCase):
                          ("MiniMaxModelAutodownload", "flux2_models"),
                          ("MiniMaxModelAutodownload", "flashsr_models")} <= connected)
         preflight = next(n for n in nodes.values() if n["type"] == "MiniMaxModelAutodownload")
-        self.assertFalse(preflight["widgets_values_named"]["llm_model"])
+        # The LLM check is ON since 3.1.3: the catalog's chat models are `optional` and
+        # `no_auto_download`, so checking them reports which candidates exist without
+        # starting a multi-gigabyte download. Before that, `false` was the guard against
+        # exactly that download.
+        self.assertTrue(preflight["widgets_values_named"]["llm_model"])
         self.assertFalse(any(n["type"] == "MiniMaxLLMSessionId" for n in nodes.values()))
 
 

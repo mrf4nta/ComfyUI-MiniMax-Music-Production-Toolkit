@@ -38,7 +38,7 @@ in the repository.
   makes an enabled LLM execute on every queued run, including unchanged prompts.
   Each cloud run may incur another API charge. Old session input wires are removed
   on workflow load; the helper remains registered for other legacy uses.
-- **`model`** — llama.cpp-compatible GGUF from `models/llm`. The bundled workflow's example model name is always offered so existing workflows keep loading.
+- **`model`** — llama.cpp-compatible GGUF from `models/llm`. The bundled workflow's example model name is always offered so existing workflows keep loading. Default is `Qwen_Qwen3.5-9B-Q4_K_M.gguf`: a catalog entry, so a first run with it downloads the file when it is missing and `auto_download` is on. The dropdown labels each entry: `✔` is already in `models/llm`, `⬇` is a catalog model that the first run downloads, with its size and star rating. The label does not change the stored value — it stays the plain file name.
 - **`max_tokens`** — response cap (example: `24576`). It is not reserved up front and cannot shorten a finished answer.
 - **`temperature`** / **`top_p`** / **`top_k`** / **`min_p`** — sampling controls (LM Studio defaults: `0.7` / `0.8` / `40` / `0.0`).
 - **`repeat_penalty`** / **`presence_penalty`** / **`frequency_penalty`** — repetition controls (defaults `1.1` / `0.0` / `0.0`).
@@ -56,6 +56,7 @@ in the repository.
 
 ## Verified models
 
+- **Qwen_Qwen3.5-9B-Q4_K_M.gguf** — the shipped default (catalog, 6.2 GiB): the Qwen 3.5 family adapter uses the same ChatML handling as the rest of the Qwen family, and the 9B class is the everyday choice for an 8–12 GiB card and above.
 - **Qwen3.8-27B-UD-IQ3_XXS.gguf** (Unsloth) — chat_format `auto` (chatml); reasoning comes as `<think>` blocks and is split off automatically.
 - **Gemma 4** (`gemma-4-12B-it-QAT-Q4_0.gguf`) — chat_format `auto` (embedded template); clean structured output without channel markers.
 

@@ -93,6 +93,9 @@ EXPECTED_ROUTES = (
     ("GET", "/minimax_music_toolkit/model_preflight"),
     ("POST", "/minimax_music_toolkit/model_preflight"),
     ("GET", "/minimax_music_toolkit/llm/providers"),
+    # Which GGUF chat models are on disk and which the catalog would still fetch (the
+    # dropdown labels its entries from this; it changes no widget value).
+    ("GET", "/minimax_music_toolkit/llm/models"),
     ("POST", "/minimax_music_toolkit/llm/configure"),
 )
 

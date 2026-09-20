@@ -113,7 +113,7 @@ Node-Typ: `MiniMaxLLMChat`. Betriebsart bestimmt wirksame Parameter; providerabh
 | ID / Einstellung | Aktueller Wert | Möglichkeiten / Bindung | Vorschlag | Deine Wahl |
 | --- | --- | --- | --- | --- |
 | `N81.enabled` – Aktiv | True | Standardfeld; native App-Bindung prüfen | E | — |
-| `N81.model` – Modell | Qwen3.8-27B-UD-IQ3_XXS.gguf | Dynamische Modell-/Dateiliste; Standardfeld; native App-Bindung prüfen | K | — |
+| `N81.model` – Modell | Qwen_Qwen3.5-9B-Q4_K_M.gguf | Dynamische Modell-/Dateiliste; Standardfeld; native App-Bindung prüfen | K | — |
 | `N81.max_tokens` – max tokens | 24576 | 1 … 131072; Standardfeld; native App-Bindung prüfen | E | — |
 | `N81.temperature` – temperature | 1 | 0.0 … 2.0; Standardfeld; native App-Bindung prüfen | E | — |
 | `N81.top_p` – top p | 0.95 | 0.0 … 1.0; Standardfeld; native App-Bindung prüfen | E | — |
@@ -161,7 +161,7 @@ optional; ein leerer oder unlesbarer Wert wird protokolliert und ignoriert.
 
 | ID / Einstellung | Aktueller Wert | Möglichkeiten / Bindung | Vorschlag | Deine Wahl |
 | --- | --- | --- | --- | --- |
-| `N134.model` – Modell | Qwen3.8-27B-UD-IQ3_XXS.gguf | Dynamische Modell-/Dateiliste; Standardfeld; native App-Bindung prüfen | K | — |
+| `N134.model` – Modell | Qwen_Qwen3.5-9B-Q4_K_M.gguf | Dynamische Modell-/Dateiliste; Standardfeld; native App-Bindung prüfen | K | — |
 | `N134.max_tokens` – max tokens | 24576 | 1 … 131072; Standardfeld; native App-Bindung prüfen | E | — |
 | `N134.temperature` – temperature | 1 | 0.0 … 2.0; Standardfeld; native App-Bindung prüfen | E | — |
 | `N134.top_p` – top p | 0.95 | 0.0 … 1.0; Standardfeld; native App-Bindung prüfen | E | — |
@@ -215,7 +215,7 @@ Node-Typ: `MiniMaxModelAutodownload`. Vorhandene Werte und vollständige Auswahl
 | `N101.minimax_models` – minimax models | True | Standardfeld; native App-Bindung prüfen | K | — |
 | `N101.flux2_models` – flux2 models | Gesteuert durch N118.cover_artwork_enabled | Verbundener Eingang: zuständige Quellfunktion anbieten; lokale Voreinstellung nicht als wirksam zeigen | A | — |
 | `N101.flashsr_models` – flashsr models | Gesteuert durch N118.refinement_enabled | Verbundener Eingang: zuständige Quellfunktion anbieten; lokale Voreinstellung nicht als wirksam zeigen | A | — |
-| `N101.llm_model` – llm model | False | Standardfeld; native App-Bindung prüfen | K | — |
+| `N101.llm_model` – llm model | True | Standardfeld; native App-Bindung prüfen | K | — |
 | `N101.auto_download` – auto download | True | Standardfeld; native App-Bindung prüfen | K | — |
 | `N101.yue2_models` – yue2 models | True | Standardfeld; native App-Bindung prüfen | K | — |
 | `N101.sheetsage2_models` – sheetsage2 models | True | Standardfeld; native App-Bindung prüfen | K | — |
@@ -368,7 +368,7 @@ Node-Typ: `FlashSRLowpassLab`. Wirkung nur bei aktivem Refinement; Einstellungen
 | `N49.custom_cutoff_hz` – custom cutoff hz | 10000 | 20.0 … 96000.0; Standardfeld; native App-Bindung prüfen | E | — |
 | `N49.custom_order` – custom order | 2 | 1 … 12; Standardfeld; native App-Bindung prüfen | E | — |
 | `N49.custom_phase_mode` – custom phase mode | zero_phase | zero_phase / causal; Standardfeld; native App-Bindung prüfen | E | — |
-| `N49.bypass` – Umgehen | False | Standardfeld; native App-Bindung prüfen | E | — |
+| `N49.bypass` – Umgehen | True | Standardfeld; native App-Bindung prüfen | E | — |
 
 ### N45 – C · FlashSR · 48 kHz
 
@@ -378,7 +378,6 @@ Node-Typ: `MiniMaxFlashSRAudio`. Wirkung nur bei aktivem Refinement; Einstellung
 | --- | --- | --- | --- | --- |
 | `N45.lowpass_input` – lowpass input | False | Standardfeld; native App-Bindung prüfen | E | — |
 | `N45.output_sr` – output sr | 48000 | 48000 / 44100 / 96000; Standardfeld; native App-Bindung prüfen | E | — |
-| `N45.auto_download` – auto download | True | Standardfeld; native App-Bindung prüfen | E | — |
 
 ### N93 – D · Crossover · FlashSR only
 
@@ -386,7 +385,7 @@ Node-Typ: `FlashSRHybridCrossover`. Wirkung nur bei aktivem Refinement; Einstell
 
 | ID / Einstellung | Aktueller Wert | Möglichkeiten / Bindung | Vorschlag | Deine Wahl |
 | --- | --- | --- | --- | --- |
-| `N93.mode` – Modus | FlashSR only | Original + FlashSR air / Hybrid replace above crossover / Original SRC only / FlashSR only; Standardfeld; native App-Bindung prüfen | E | — |
+| `N93.mode` – Modus | Original SRC only | Original + FlashSR air / Hybrid replace above crossover / Original SRC only / FlashSR only; Standardfeld; native App-Bindung prüfen | E | — |
 | `N93.crossover_hz` – crossover hz | 13500 | 7000.0 … 18000.0; Standardfeld; native App-Bindung prüfen | E | — |
 | `N93.transition_hz` – transition hz | 2000 | 300.0 … 6000.0; Standardfeld; native App-Bindung prüfen | E | — |
 | `N93.flashsr_hf_mix` – flashsr hf mix | 0.45 | 0.0 … 1.5; Standardfeld; native App-Bindung prüfen | E | — |

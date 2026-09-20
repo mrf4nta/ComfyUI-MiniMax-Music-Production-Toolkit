@@ -26,14 +26,13 @@ models/audio/flashsr/sr_vocoder.pth
 models/audio/flashsr/vae.pth
 ```
 
-Downloads are logged with progress and the run continues afterwards. Set `auto_download` to OFF to fail fast instead. Weight source: Hugging Face dataset `jakeoneijk/FlashSR_weights`.
+The stage has no download switch of its own. When it runs, it fetches what it needs: the download is logged with progress, resumable and checked against free disk space, and a fetch that fails (offline, no space, source gone) makes the stage skip itself with one warning line and pass the audio through unchanged - it never ends the run (`settings_json` then says `skipped`). The decision to run this stage at all is the Refinement gate in the workflow, and the **model check** node (`MiniMaxModelAutodownload`) is where downloads are switched on for a whole run; when it has fetched the weights, this node simply finds them. Weight source: Hugging Face `laion/FlashSR_One-step_Versatile_Audio_Super-resolution` - the same three files with identical byte sizes; the earlier `jakeoneijk/FlashSR_weights` dataset stopped answering (HTTP 401) in June 2026.
 
 ## Inputs
 
 - **`audio`** (`AUDIO`) — signal to super-resolve.
 - **`lowpass_input`** (`BOOLEAN`) — FlashSR internal low-pass flag.
 - **`output_sr`** (`48000` / `44100` / `96000`) — delivery sample rate.
-- **`auto_download`** (`BOOLEAN`) — enable first-use downloads.
 
 ## Outputs
 

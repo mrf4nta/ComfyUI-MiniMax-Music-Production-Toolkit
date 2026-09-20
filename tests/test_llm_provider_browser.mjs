@@ -14,6 +14,14 @@ const server = http.createServer(async (req, res) => {
         if (req.url === "/scripts/app.js") { res.setHeader("Content-Type", "text/javascript"); res.end("export const app={registerExtension(extension){globalThis.extension=extension;}};"); return; }
         if (req.url === "/scripts/api.js") { res.setHeader("Content-Type", "text/javascript"); res.end("export const api={fetchApi:(...args)=>fetch(...args)};"); return; }
         if (["/web/llm_provider.js", "/web/llm_provider_ui.js", "/web/prompt_ui_utils.js"].includes(req.url)) { res.setHeader("Content-Type", "text/javascript"); res.end(await readFile(new URL(`..${req.url}`, import.meta.url))); return; }
+        if (req.url.endsWith("/llm/models")) {
+            res.setHeader("Content-Type", "application/json");
+            res.end(JSON.stringify({folder: "models/llm", installed: 1, available: 1, entries: [
+                {name: "gemma-4-12b-it-qat-q4_0.gguf", installed: true, gib: 6.5, stars: "\u2605\u2605\u2605\u2605\u2605"},
+                {name: "gemma-4-26B_q4_0-it.gguf", installed: false, gib: 13.45, stars: "\u2605\u2605\u2605\u2605\u2605"},
+                {name: "LFM2.5-1.2B-Instruct-Q4_K_M.gguf", installed: false, gib: 0.68, stars: "\u2605\u2605\u2606\u2606\u2606"}
+            ]})); return;
+        }
         if (req.url.endsWith("/configure")) {
             let raw = ""; for await (const chunk of req) raw += chunk;
             const body = JSON.parse(raw); requests.push(body);
@@ -55,7 +63,7 @@ try {
                     row.append(document.createTextNode(w.label || w.name));
                     const input = document.createElement(w.options.values ? "select" : "input");
                     input.setAttribute("aria-label", w.label || w.name); input.style.cssText = "width:100%;padding:6px;box-sizing:border-box";
-                    if (w.options.values) for (const value of w.options.values) { const option = document.createElement("option"); option.textContent = option.value = value; input.append(option); }
+                    if (w.options.values) for (const value of w.options.values) { const option = document.createElement("option"); option.value = value; option.textContent = w.options.getOptionLabel?.(value) ?? value; input.append(option); }
                     input.value = w.value; input.onchange = () => { w.value = input.value; w.callback?.(input.value); };
                     row.append(input);
                 }
@@ -64,6 +72,31 @@ try {
         }
         extension.nodeCreated(testNode); render();
     }, contract);
+    // The GGUF dropdown holds installed files and catalog candidates in one list, so the
+    // entries carry a mark - and the mark lives in the label only. The value stays the bare
+    // file name, otherwise a saved workflow would stop resolving after a download.
+    await page.waitForFunction(() => testNode.widgets.find(w => w.name === "model")?.label?.startsWith("Model"));
+    const modelSpec = contract.required.model || contract.optional.model;
+    const marks = await page.evaluate(() => {
+        const w = testNode.widgets.find(entry => entry.name === "model");
+        const label = w.options.getOptionLabel;
+        return {installed: label("gemma-4-12b-it-qat-q4_0.gguf"),
+            download: label("gemma-4-26B_q4_0-it.gguf"),
+            unknown: label("not-in-the-inventory.gguf"),
+            summary: w.label, value: w.value};
+    });
+    assert.equal(marks.installed, "\u2714 gemma-4-12b-it-qat-q4_0.gguf");
+    assert.equal(marks.download, "\u2B07 gemma-4-26B_q4_0-it.gguf \u00B7 13.4 GiB \u00B7 \u2605\u2605\u2605\u2605\u2605");
+    assert.equal(marks.unknown, "not-in-the-inventory.gguf", "an unknown name is not claimed to be installed");
+    assert.equal(marks.summary, "Model - 1 installed, 2 to download");
+    assert.equal(marks.value, modelSpec[0][0], "the widget value must stay the bare file name");
+    const rendered = await page.evaluate(() => {
+        const option = [...document.querySelectorAll("select option")].find(o => o.textContent.startsWith("\u2714"));
+        return option ? {text: option.textContent, value: option.value} : null;
+    });
+    assert.ok(rendered, "the dropdown must show the install mark");
+    assert.equal(rendered.value, "gemma-4-12b-it-qat-q4_0.gguf", "the option value stays the file name");
+    assert.deepEqual(errors, [], "labeling the dropdown must not raise in the page");
     await page.getByLabel("Run language model", {exact: true}).selectOption("Local app / server");
     assert.equal(await page.getByLabel("model", {exact: true}).count(), 0);
     assert.equal(await page.getByLabel("Local app", {exact: true}).count(), 1);

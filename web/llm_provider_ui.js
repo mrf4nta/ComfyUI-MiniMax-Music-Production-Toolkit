@@ -21,6 +21,44 @@ export const PROVIDER_NODES = new Set(["MiniMaxLLMChat", "MiniMaxLLMSettings"]);
 const BASIC = new Set(["enabled", "model", "max_tokens", "temperature", "n_ctx", "auto_download"]);
 
 /**
+ * Marks for the GGUF dropdown: the list holds installed files *and* catalog
+ * candidates (a candidate downloads on first use), so it has to say which is which.
+ *
+ * The mark lives in the option *label* only. The widget value stays the bare file
+ * name, so a saved workflow keeps resolving after that file has been downloaded -
+ * and ``getOptionLabel`` is what ComfyUI 1.52 uses for both the displayed value and
+ * the dropdown entries, so no value is ever rewritten.
+ */
+export const INSTALLED_MARK = "\u2714";
+export const DOWNLOAD_MARK = "\u2B07";
+
+/** The label for one GGUF entry; an unknown name is shown unchanged, not guessed at. */
+export function modelOptionLabel(value, info) {
+    if (typeof value !== "string" || !value || !info) return value;
+    if (info.installed) return `${INSTALLED_MARK} ${value}`;
+    const details = [];
+    const gib = Number(info.gib);
+    if (Number.isFinite(gib) && gib > 0) details.push(`${gib.toFixed(1)} GiB`);
+    if (info.stars) details.push(info.stars);
+    return `${DOWNLOAD_MARK} ${value}${details.length ? " \u00B7 " + details.join(" \u00B7 ") : ""}`;
+}
+
+/** One line for the model widget's label, e.g. ``Model - 3 installed, 16 to download``. */
+export function modelInventorySummary(listing) {
+    const entries = Array.isArray(listing?.entries) ? listing.entries : [];
+    if (!entries.length) return "";
+    const installed = entries.filter(entry => entry.installed).length;
+    return `Model - ${installed} installed, ${entries.length - installed} to download`;
+}
+
+/** The hover text that explains the two marks, including where the files belong. */
+export function modelInventoryTooltip(listing) {
+    const folder = typeof listing?.folder === "string" && listing.folder ? listing.folder : "models/llm";
+    return `${INSTALLED_MARK} is already in your ${folder} folder. ${DOWNLOAD_MARK} is not downloaded yet; `
+        + "the size and the suitability rating are shown, and the first use of that model fetches it.";
+}
+
+/**
  * The node's action buttons, with the help text that must be attached to each.
  *
  * Kept as data so the frontend test can require that no button ships without a

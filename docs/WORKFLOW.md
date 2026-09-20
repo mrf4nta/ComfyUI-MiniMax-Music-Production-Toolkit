@@ -111,7 +111,9 @@ The full workflow intentionally preserves an original branch as well so you are 
 
 `FlashSR Hybrid Crossover` combines the clean resampled original with controlled FlashSR high-frequency content.
 
-The bundled workflows start in `FlashSR only` mode. Select `Original + FlashSR air`
+The bundled workflows ship with the crossover at `Original SRC only` - the FlashSR
+signal is not used, because the restoration chain is off by default. When you switch
+that chain on, start at `FlashSR only`, or select `Original + FlashSR air`
 to retain the original low band and add a controlled amount of reconstructed
 high-frequency content. This stage executes only when refinement is active in
 the main YuE2/MM3 workflow.

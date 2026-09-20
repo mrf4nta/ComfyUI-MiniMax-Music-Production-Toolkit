@@ -340,7 +340,6 @@ NODE_INPUT_TOOLTIPS = {
         "audio": "Audio signal to super-resolve. FlashSR reconstructs high-frequency content at 48 kHz; the hybrid crossover later combines it with the original signal.",
         "lowpass_input": "When enabled, FlashSR applies an internal low-pass to its input first. The example workflow keeps this OFF because the PRE low-pass node already controls the input bandwidth.",
         "output_sr": "Sample rate of the delivered audio. FlashSR itself always works at 48 kHz; other rates are produced by a clean resample afterwards. The example workflow uses 48000 and handles delivery rate later.",
-        "auto_download": "When enabled, the missing FlashSR weights (student_ldm.pth, sr_vocoder.pth, vae.pth) are downloaded automatically on first use (see models_config.json) and logged with progress. Disable to fail fast instead. The inference code itself is bundled with the toolkit in flashsr_inference/ and is never downloaded.",
     },
     "MiniMaxLLMChat": {
         "enabled": "Master switch for the LLM section. When disabled, the node returns empty text without loading any model and the parser node can fall back to its manual fields — so the LLM part of the workflow can be switched off without an error.",
@@ -376,7 +375,7 @@ NODE_INPUT_TOOLTIPS = {
         "minimax_models": "Check the MiniMax Music 3 files referenced by the workflow (dit, text encoder, VAE).",
         "flux2_models": "Check the FLUX.2 Klein artwork branch files (dit, text encoder, VAE).",
         "flashsr_models": "Check the FlashSR weight files used by the integrated Audio Super Resolution node.",
-        "llm_model": "Also check the example LLM GGUF referenced by the workflow. Turn it off when you use a cloud or local-server model.",
+        "llm_model": "Check the chat-model candidates from the catalog and report which are present. Nothing is downloaded here (they are optional), and the model you select in the LLM node is fetched when you use it. Turn it off when you use a cloud or local-server model.",
         "auto_download": "Download every missing file that has a configured URL. Missing files without a URL are only reported with guidance.",
         "whisper_models": "Check the Whisper checkpoint for new/original lyrics in YuE2 Cover only. Off excludes it from this check; auto_download controls downloads. Instrumental and other models never request it.",
         "cover_source_json": "Connect Cover song / source audio so this node can see the selected lyrics mode and only request the Whisper weights the run actually uses.",

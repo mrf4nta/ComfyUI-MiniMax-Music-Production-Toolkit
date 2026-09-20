@@ -24,7 +24,9 @@ Everything that describes *where the text comes from and how it is generated*:
   settings node is usually the better place for it: it feeds every connected call, so
   one switch covers the song request and both Cover Studio calls.
 - **Model** — the GGUF for the integrated backend, or the server model ID for external
-  ones.
+  ones. In the GGUF dropdown, `✔` marks a file that is already in `models/llm` and `⬇` a
+  catalog model the first run would download (with its size and rating) — a label only,
+  the stored value stays the plain file name.
 - **Budgets** — `max_tokens`, `n_ctx`.
 - **Sampling** — `temperature`, `top_p`, `top_k`, `min_p`, `repeat_penalty`,
   `presence_penalty`, `frequency_penalty`, `seed`, `thinking`, `chat_format`.

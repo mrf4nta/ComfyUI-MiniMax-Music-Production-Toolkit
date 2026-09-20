@@ -145,11 +145,11 @@ def main() -> None:
             widget_input("tensor_parallel", "BOOLEAN"),
         ],
         widgets_values=[
-            True, "Qwen3.8-27B-UD-IQ3_XXS.gguf", 16384, 0.7, 0.8, -1, 32768, True, True,
+            True, "Qwen_Qwen3.5-9B-Q4_K_M.gguf", 16384, 0.7, 0.8, -1, 32768, True, True,
             "auto", "off", 40, 0.0, 1.1, 0.0, 0.0, -1, "none", "", 0, False,
         ],
         widgets_values_named={
-            "enabled": True, "model": "Qwen3.8-27B-UD-IQ3_XXS.gguf", "max_tokens": 16384,
+            "enabled": True, "model": "Qwen_Qwen3.5-9B-Q4_K_M.gguf", "max_tokens": 16384,
             "temperature": 0.7, "top_p": 0.8, "n_gpu_layers": -1, "n_ctx": 32768,
             "reset_session": True, "auto_download": True,
             "chat_format": "auto", "thinking": "off", "top_k": 40, "min_p": 0.0,
@@ -574,7 +574,7 @@ def main() -> None:
         "diffusion_models\\flux-2-klein-4b.safetensors\n"
         "text_encoders\\qwen_3_4b.safetensors\n"
         "vae\\flux2-vae.safetensors\n"
-        "llm\\Qwen3.8-27B-UD-IQ3_XXS.gguf   (any GGUF works)\n"
+        "llm\\Qwen_Qwen3.5-9B-Q4_K_M.gguf   (any GGUF works)\n"
         "audio\\flashsr\\student_ldm.pth + sr_vocoder.pth + vae.pth   (auto-download)\n"
         "```\n\n"
         "`Model Auto-Download / Check` reports missing files at the start of every run. The FlashSR inference code is "

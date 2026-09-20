@@ -325,7 +325,7 @@
     ]
   },
   "llm": {
-    "note": "Integrated LLM chat models (llama.cpp GGUF) for models/llm. Every file is pinned to the commit sha of the repository and was verified with a HEAD request against its resolve URL: HTTP 200 and exactly the byte size below. The candidates are the ones llm_profiles.py recommends per hardware class, plus smaller alternatives for 4-12 GiB cards; any other llama.cpp-compatible GGUF placed in models/llm is offered as well. Qwen 3.5/3.8 GGUFs use the Gated DeltaNet architecture and need a recent llama-cpp-python build - the Llama 3.1 and Mistral entries load on older builds. None of them is downloaded by the model check - select one and it downloads on first use.",
+    "note": "Integrated LLM chat models (llama.cpp GGUF) for models/llm. Every file is pinned to the commit sha of the repository and was verified with a HEAD request against its resolve URL: HTTP 200 and exactly the byte size below. The candidates are the ones llm_profiles.py recommends per hardware class, plus smaller alternatives for 4-12 GiB cards and the faster families (LFM2.5, Gemma 4 \"effective 4B\", 26B MoE); any other llama.cpp-compatible GGUF placed in models/llm is offered as well. Qwen 3.5/3.8 GGUFs use the Gated DeltaNet architecture and need a recent llama-cpp-python build - the Llama 3.1 and Mistral entries load on older builds. None of them is downloaded by the model check - select one and it downloads on first use.",
     "target": "models/llm",
     "files": [
       {
@@ -562,6 +562,118 @@
           "vram_16"
         ],
         "rating_note": "Multilingual (German is listed by the authors) and llama architecture; older and less inventive than the newer families."
+      },
+      {
+        "name": "gemma-4-26B_q4_0-it.gguf",
+        "filename": "gemma-4-26B_q4_0-it.gguf",
+        "repo_id": "google/gemma-4-26B-A4B-it-qat-q4_0-gguf",
+        "repo_type": "model",
+        "revision": "d1c082be9cf3c8a514acf63b8761f4b41935842e",
+        "bytes": 14439363584,
+        "timeout": 7200,
+        "rating": 5,
+        "suits": [
+          "vram_16",
+          "vram_24",
+          "vram_32"
+        ],
+        "rating_note": "Google's quantization-aware 26B (MoE, ~4B active): the largest quality step in the catalog that still fits a 24 GiB card, and faster than a dense 26B for it.",
+        "optional": true,
+        "no_auto_download": true,
+        "note": "Checked and reported, never downloaded by the model check: a language model is several gigabytes, so it downloads where it is actually selected. Choose it in the LLM settings node (or on the chat node) and the node fetches it on first use when auto_download is on."
+      },
+      {
+        "name": "gemma-4-26B-A4B-it-UD-Q5_K_M.gguf",
+        "filename": "gemma-4-26B-A4B-it-UD-Q5_K_M.gguf",
+        "repo_id": "unsloth/gemma-4-26B-A4B-it-GGUF",
+        "repo_type": "model",
+        "revision": "c099eb48e663fd284577b04978a94ffccb261841",
+        "bytes": 21150365408,
+        "timeout": 7200,
+        "rating": 4,
+        "suits": [
+          "vram_24",
+          "vram_32"
+        ],
+        "rating_note": "More precision for the same 26B MoE (21.15 GiB): a 32 GiB card gets closer to the full model, at the cost of a much larger file and context pressure.",
+        "optional": true,
+        "no_auto_download": true,
+        "note": "Checked and reported, never downloaded by the model check: a language model is several gigabytes, so it downloads where it is actually selected. Choose it in the LLM settings node (or on the chat node) and the node fetches it on first use when auto_download is on."
+      },
+      {
+        "name": "gemma-4-E4B_q4_0-it.gguf",
+        "filename": "gemma-4-E4B_q4_0-it.gguf",
+        "repo_id": "google/gemma-4-E4B-it-qat-q4_0-gguf",
+        "repo_type": "model",
+        "revision": "4b4a2c1d584be7264f87aac328a1bc739ce81b6c",
+        "bytes": 5154941280,
+        "timeout": 7200,
+        "rating": 4,
+        "suits": [
+          "vram_8",
+          "vram_12",
+          "vram_16"
+        ],
+        "rating_note": "The small, fast Gemma 4 (\"effective 4B\"): the same family as the 12B QAT at 5.15 GiB, for 8 GiB cards and quick drafts.",
+        "optional": true,
+        "no_auto_download": true,
+        "note": "Checked and reported, never downloaded by the model check: a language model is several gigabytes, so it downloads where it is actually selected. Choose it in the LLM settings node (or on the chat node) and the node fetches it on first use when auto_download is on."
+      },
+      {
+        "name": "LFM2.5-8B-A1B-Q4_K_M.gguf",
+        "filename": "LFM2.5-8B-A1B-Q4_K_M.gguf",
+        "repo_id": "LiquidAI/LFM2.5-8B-A1B-GGUF",
+        "repo_type": "model",
+        "revision": "49c14831707011e64d70b2ebd8462ba08d608434",
+        "bytes": 5155564768,
+        "timeout": 7200,
+        "rating": 3,
+        "suits": [
+          "vram_8",
+          "vram_12",
+          "vram_16"
+        ],
+        "rating_note": "Built for speed: 8B total but only ~1B active per token (MoE), so it answers far quicker than its size suggests. Its quality on this toolkit's long structured prompts is not measured - use it to iterate, and compare before a final render.",
+        "optional": true,
+        "no_auto_download": true,
+        "note": "Checked and reported, never downloaded by the model check: a language model is several gigabytes, so it downloads where it is actually selected. Choose it in the LLM settings node (or on the chat node) and the node fetches it on first use when auto_download is on."
+      },
+      {
+        "name": "LFM2.5-2.6B-Q4_K_M.gguf",
+        "filename": "LFM2.5-2.6B-Q4_K_M.gguf",
+        "repo_id": "LiquidAI/LFM2.5-2.6B-GGUF",
+        "repo_type": "model",
+        "revision": "84022ce711b28455e8c4fc364ce68c00cf995875",
+        "bytes": 1674455040,
+        "timeout": 7200,
+        "rating": 3,
+        "suits": [
+          "cpu",
+          "vram_4",
+          "vram_8"
+        ],
+        "rating_note": "Small, dense and quick (1.67 GiB): the fastest usable option on a small card or on the CPU, where quality matters less than getting an answer to compare.",
+        "optional": true,
+        "no_auto_download": true,
+        "note": "Checked and reported, never downloaded by the model check: a language model is several gigabytes, so it downloads where it is actually selected. Choose it in the LLM settings node (or on the chat node) and the node fetches it on first use when auto_download is on."
+      },
+      {
+        "name": "LFM2.5-1.2B-Instruct-Q4_K_M.gguf",
+        "filename": "LFM2.5-1.2B-Instruct-Q4_K_M.gguf",
+        "repo_id": "LiquidAI/LFM2.5-1.2B-Instruct-GGUF",
+        "repo_type": "model",
+        "revision": "6767265158422fb8a19c62ceb45f16f05363615b",
+        "bytes": 730895168,
+        "timeout": 7200,
+        "rating": 2,
+        "suits": [
+          "cpu",
+          "vram_4"
+        ],
+        "rating_note": "The smallest chat model in the catalog (0.73 GiB) and instruction-tuned: a fallback for very little memory or a CPU-only test run, not for final prompts.",
+        "optional": true,
+        "no_auto_download": true,
+        "note": "Checked and reported, never downloaded by the model check: a language model is several gigabytes, so it downloads where it is actually selected. Choose it in the LLM settings node (or on the chat node) and the node fetches it on first use when auto_download is on."
       }
     ],
     "directory": "models/llm"

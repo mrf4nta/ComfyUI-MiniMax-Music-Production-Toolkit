@@ -110,11 +110,17 @@ The main workflow also persists the independent artifact reduction report under
 The resample-only report still records input/output rates. AudioEnhance exports
 FLAC without a central production JSON, as before.
 
-The starting production restoration settings remain PRE 10 kHz, crossover
-FlashSR only, POST 19 kHz. Select Original + FlashSR air explicitly if preferred.
-Cover render size is 1536 px and embedded cover size is 1024 px. The saved
-27B LLM / 37376 context is demanding; select a smaller catalog model/context
-for limited memory. These settings do not automatically adapt to hardware.
+The restoration chain ships **off** in both example workflows, and its stages are off
+accordingly: PRE low-pass bypassed (`bypass=true`), crossover `Original SRC only`,
+POST 19 kHz set. FlashSR is the expensive part - 2.3 GB of weights on first use and
+minutes per song - so it is opt-in; switching the chain on (CHOOSE `Refinement`, or
+`Refinement enabled` in the Audio Enhancement Lab) means switching its helpers on as
+well: B `bypass=false` (PRE 10 kHz is the starting point) and D `mode=FlashSR only`
+(`Original + FlashSR air` blends the original low band back in).
+Cover render size is 1536 px and embedded cover size is 1024 px. The saved chat model
+(`Qwen_Qwen3.5-9B-Q4_K_M.gguf`, 6.2 GiB) with its 37376-token context is a moderate
+default; select a smaller catalog model or context when memory is tight. These settings
+do not automatically adapt to hardware.
 
 ## Remaining architectural considerations
 

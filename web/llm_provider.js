@@ -1,6 +1,6 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
-import { widget, settings, signature, refresh, CONNECTION_FIELDS, BUTTONS, PROVIDER_NODES } from "./llm_provider_ui.js";
+import { widget, settings, signature, refresh, CONNECTION_FIELDS, BUTTONS, PROVIDER_NODES, INTEGRATED, modelOptionLabel, modelInventorySummary, modelInventoryTooltip } from "./llm_provider_ui.js";
 import { applyTooltip } from "./prompt_ui_utils.js";
 
 async function action(node, name, extra = {}) {
@@ -53,6 +53,48 @@ function providerCatalog() {
     return catalogPromise;
 }
 
+let inventoryPromise;
+function modelInventory() {
+    if (!inventoryPromise) inventoryPromise = api.fetchApi("/minimax_music_toolkit/llm/models")
+        .then(response => { if (!response.ok) throw new Error(`Model inventory unavailable (HTTP ${response.status}).`); return response.json(); })
+        .catch(error => { inventoryPromise = null; throw error; });
+    return inventoryPromise;
+}
+
+/**
+ * Label the GGUF dropdown with what is already on disk and what a selection would
+ * download first, plus a one-line count on the widget itself.
+ *
+ * Only the labels change - the widget value stays the bare file name, so a saved
+ * workflow keeps loading. A missing inventory (older server, renamed route) leaves the
+ * plain file names in place: the dropdown still works, it just cannot say what is there.
+ */
+async function applyInventory(node) {
+    if ((widget(node, "backend")?.value || INTEGRATED) !== INTEGRATED) return;
+    const model = widget(node, "model");
+    if (!model) return;
+    try {
+        const listing = await modelInventory();
+        const info = new Map((listing.entries || []).map(entry => [entry.name, entry]));
+        model.options = model.options || {};
+        model.options.getOptionLabel = value => modelOptionLabel(value, info.get(value));
+        const summary = modelInventorySummary(listing);
+        if (summary) {
+            model.label = summary;
+            applyTooltip(model, modelInventoryTooltip(listing));
+        }
+        node.setDirtyCanvas?.(true, true);
+    } catch (error) {
+        console.warn("LLM model inventory unavailable:", error.message);
+    }
+}
+
+/** Visibility, then the model marks - both are recomputed when the backend changes. */
+function sync(node) {
+    refresh(node);
+    void applyInventory(node);
+}
+
 // Nodes that carry the same provider widgets (the chat node and the central
 // settings node) are listed in llm_provider_ui.js so the frontend test can
 // require them; this extension only wires them to the canvas.
@@ -75,7 +117,7 @@ app.registerExtension({
                         const target = widget(node, field); if (target) target.value = "";
                     }
                 }
-                refresh(node);
+                sync(node);
             };
         }
         const button = (name, label, tooltip, callback) => {
@@ -87,7 +129,7 @@ app.registerExtension({
             return w;
         };
         button("llm_ui_advanced", BUTTONS.llm_ui_advanced.label, BUTTONS.llm_ui_advanced.tooltip,
-            () => { node._llmAdvanced = !node._llmAdvanced; refresh(node); });
+            () => { node._llmAdvanced = !node._llmAdvanced; sync(node); });
         button("llm_ui_key", BUTTONS.llm_ui_key.label, BUTTONS.llm_ui_key.tooltip, () => {
             const before = signature(node);
             const keep = permanent(node);
@@ -146,9 +188,9 @@ app.registerExtension({
                 choose("Connection setup", field, "The address is reached from the computer running ComfyUI. In Docker or on a remote host, localhost refers to that environment.", async () => {});
             } catch (error) { alert(error.message); }
         });
-        queueMicrotask(() => refresh(node));
+        queueMicrotask(() => sync(node));
     },
     loadedGraphNode(node) {
-        if (PROVIDER_NODES.has(node.comfyClass || node.type)) queueMicrotask(() => refresh(node));
+        if (PROVIDER_NODES.has(node.comfyClass || node.type)) queueMicrotask(() => sync(node));
     },
 });

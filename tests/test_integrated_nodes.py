@@ -88,6 +88,10 @@ class FlashSRHelpersTests(unittest.TestCase):
         data = flashsr.MiniMaxFlashSRAudio.INPUT_TYPES()
         self.assertEqual(data["required"]["output_sr"][0], ["48000", "44100", "96000"])
         self.assertEqual(data["required"]["lowpass_input"][1]["default"], False)
+        # No download switch on the stage: the Refinement gate decides whether it runs, the
+        # model check node decides about downloads, and a stage that runs fetches what it
+        # needs. A switch here only ever turned "run the stage" into "skip it silently".
+        self.assertNotIn("auto_download", data["required"])
 
 
 class LLMChatTests(unittest.TestCase):

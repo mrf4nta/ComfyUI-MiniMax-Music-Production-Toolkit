@@ -39,6 +39,18 @@ def register_routes():
     async def providers(request):
         return web.json_response({"local": LOCAL, "cloud": CLOUD})
 
+    @PromptServer.instance.routes.get(PATH + "/models")
+    async def models(request):
+        # Imported here rather than at module level: the route table is built while
+        # ComfyUI starts, and the LLM node module should come up with the first LLM
+        # run, not with the server.
+        from .llm_chat import llm_model_inventory
+
+        try:
+            return web.json_response(llm_model_inventory())
+        except Exception as exc:  # pragma: no cover - defensive response boundary
+            return web.json_response({"error": f"{type(exc).__name__}: {exc}"}, status=500)
+
     @PromptServer.instance.routes.post(PATH + "/configure")
     async def configure(request):
         # Configuration is a same-origin UI operation, never a cross-site form.

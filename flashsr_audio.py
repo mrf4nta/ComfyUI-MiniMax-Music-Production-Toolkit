@@ -603,12 +603,17 @@ class MiniMaxFlashSRAudio:
 
     @classmethod
     def INPUT_TYPES(cls):
+        # No download switch here on purpose. The gate that switches this stage on and off is
+        # that decision, and a switch that only turned "run the stage" into "skip it with a
+        # warning" was a silent no-op in a node of its own - while the model check node is
+        # where downloads are decided for a run. A stage that runs fetches the weights it
+        # needs, exactly like the Whisper checkpoint: logged with progress, resumable and
+        # disk-space checked, and a fetch that fails skips the stage instead of ending the run.
         return {
             "required": {
                 "audio": ("AUDIO",),
                 "lowpass_input": ("BOOLEAN", {"default": False}),
                 "output_sr": (["48000", "44100", "96000"], {"default": "48000"}),
-                "auto_download": ("BOOLEAN", {"default": True}),
             }
         }
 
@@ -624,6 +629,10 @@ class MiniMaxFlashSRAudio:
         the vendor's stochastic steps reproducible through a locked, restored RNG
         context (determinism is only promised for the backend combination that was
         actually tested - see the module tests).
+
+        ``auto_download`` is kept for direct Python callers (tests, scripts); the node
+        itself has no such widget and always allows the first-use fetch - see
+        ``INPUT_TYPES``.
         """
         batch, in_sr = _to_batch_channel_samples(audio)
         status = flashsr_weights_status(bool(auto_download))

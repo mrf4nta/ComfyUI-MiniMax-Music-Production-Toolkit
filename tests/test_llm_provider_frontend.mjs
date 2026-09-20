@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { visible, refresh, settings, signature, INTEGRATED, LOCAL, CLOUD, BUTTONS, PROVIDER_NODES } from "../web/llm_provider_ui.js";
+import { visible, refresh, settings, signature, INTEGRATED, LOCAL, CLOUD, BUTTONS, PROVIDER_NODES, INSTALLED_MARK, DOWNLOAD_MARK, modelOptionLabel, modelInventorySummary, modelInventoryTooltip } from "../web/llm_provider_ui.js";
 import { removeLegacyLLMSessionInput } from "../web/migration_utils.js";
 import { applyTooltip } from "../web/prompt_ui_utils.js";
 
@@ -28,6 +28,32 @@ applyTooltip(fakeDom, "dom help");
 assert.equal(fakeDom.title, "dom help", "DOM elements need the native title attribute");
 assert.equal(fakeDom.inputEl.title, "dom help");
 assert.equal(applyTooltip(undefined, "ignored"), undefined, "a missing widget must not throw");
+
+// The GGUF dropdown holds installed files and catalog candidates in one list, so the
+// label has to say which is which - while the VALUE stays the bare file name, because
+// that is what a saved workflow and the loader resolve.
+const installedEntry = {name: "gemma-4-12b-it-qat-q4_0.gguf", installed: true, gib: 6.5, stars: "\u2605\u2605\u2605\u2605\u2605"};
+const missingEntry = {name: "gemma-4-26B_q4_0-it.gguf", installed: false, gib: 13.45, stars: "\u2605\u2605\u2605\u2605\u2605"};
+assert.equal(modelOptionLabel(installedEntry.name, installedEntry), `${INSTALLED_MARK} ${installedEntry.name}`,
+    "an installed model is marked as installed");
+assert.equal(modelOptionLabel(missingEntry.name, missingEntry),
+    `${DOWNLOAD_MARK} ${missingEntry.name} \u00B7 13.4 GiB \u00B7 \u2605\u2605\u2605\u2605\u2605`,
+    "a catalog model that is not downloaded shows its download size and rating");
+assert.equal(modelOptionLabel("mine.gguf", undefined), "mine.gguf",
+    "a name the inventory does not know is shown unchanged, not guessed at");
+assert.equal(modelOptionLabel("mine.gguf", {installed: false, gib: null}), `${DOWNLOAD_MARK} mine.gguf`,
+    "an entry without a known size still gets the download mark");
+assert.equal(modelOptionLabel("", installedEntry), "", "an empty value stays empty");
+assert.equal(modelOptionLabel(installedEntry.name, installedEntry).endsWith(installedEntry.name), true,
+    "the file name must survive the label - it is what the widget value holds");
+
+assert.equal(modelInventorySummary({entries: [installedEntry, missingEntry]}), "Model - 1 installed, 1 to download");
+assert.equal(modelInventorySummary({entries: [installedEntry]}), "Model - 1 installed, 0 to download");
+assert.equal(modelInventorySummary({}), "", "an empty inventory must not relabel the widget");
+assert.equal(modelInventorySummary(undefined), "", "a missing inventory must not throw");
+assert.ok(modelInventoryTooltip({folder: "models/llm"}).includes("models/llm"),
+    "the tooltip says where the files belong");
+assert.ok(modelInventoryTooltip(undefined).includes("models/llm"), "the tooltip falls back to the default folder");
 
 for (const mode of [INTEGRATED, LOCAL, CLOUD]) {
     assert.equal(visible("backend", mode), true);

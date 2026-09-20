@@ -15,7 +15,10 @@ Checks the model files referenced by the bundled workflow and downloads missing 
 - **`minimax_models`** (`BOOLEAN`) — check MiniMax Music 3 files (dit / text encoder / VAE).
 - **`flux2_models`** (`BOOLEAN`) — check the FLUX.2 Klein artwork branch files.
 - **`flashsr_models`** (`BOOLEAN`) — check the FlashSR weight files used by `MiniMaxFlashSRAudio`.
-- **`llm_model`** (`BOOLEAN`) — check the example LLM GGUF referenced by the workflow.
+- **`llm_model`** (`BOOLEAN`) — check the chat-model candidates listed in
+  `models_config.json`. They are `optional` and `no_auto_download`, so this reports
+  which of them are present without downloading any; the model you select in the LLM
+  node is the one that gets fetched.
 - **`auto_download`** (`BOOLEAN`) — download every missing file that has a configured URL.
 - **`yue2_models`** (`BOOLEAN`) — check/download the YuE2 BF16 checkpoint; enabled
   on new nodes and the Yue2 workflow. Older workflows keep it off on restore.

@@ -4,6 +4,84 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+## [3.1.3] - 2026-09-20
+
+- **The FlashSR stage lost its own `auto_download` switch.** `MiniMaxFlashSRAudio` carried a
+  second download toggle next to the model check node's flags, and the two decided the same
+  thing in different places - worse, with it OFF a missing weight set turned the stage into a
+  silent no-op (`skipped: ... auto-download disabled`). It is gone: a stage that runs fetches
+  the weights it needs - logged with progress, resumable, disk-space checked - exactly like the
+  Whisper checkpoint does, and a fetch that fails skips the stage with one warning line instead
+  of ending the run. The Refinement gate remains the switch that decides whether the stage runs
+  at all, and the model check node remains the place where downloads are decided for a whole
+  run. The Python function keeps its `auto_download` argument for direct callers (tests,
+  scripts). Both example workflows dropped the stored widget value, so their positional widget
+  lists still match the node, and `tests/fixtures/node_contracts.json` was regenerated.
+
+- **The restoration chain ships off in both example workflows.** FlashSR costs 2.3 GB of
+  weights on first use and minutes per song, so the shipped default is now: Refinement off in
+  the Audio Enhancement Lab (its `Refinement enabled` switch is `false` - the main workflow
+  already defaults to off for YuE2 through CHOOSE), the PRE low-pass bypassed (`bypass=true`)
+  and the crossover at `Original SRC only`. Those two stages exist for FlashSR, so leaving them
+  on while it is off was misleading - and at `Original SRC only` the D stage would have run and
+  thrown the FlashSR signal away. Switching the chain on means switching its helpers on as
+  well: B `bypass=false` (PRE 10 kHz is the starting point) and D `mode=FlashSR only`
+  (`Original + FlashSR air` blends the original low band back in). Both workflow notes state
+  this, as do `docs/WORKFLOW.md` and `docs/WORKFLOW_OPTIMIZED.md`, and the APP-MODE catalog
+  follows the new values (`N49.bypass`, `N93.mode`).
+
+- **`Qwen_Qwen3.5-9B-Q4_K_M.gguf` is the default chat model now** (was
+  `Qwen3.8-27B-UD-IQ3_XXS.gguf`). A 9B Q4_K_M at 6.2 GiB is the everyday size for this
+  workload: it fits an 8–12 GiB card as well as a larger one, and it is a catalog entry, so a
+  first run that starts with the default fetches the file itself when it is missing and
+  `auto_download` is on. One constant feeds the chat node, and the central settings node
+  derives its widgets from that node, so the same name is the default in every LLM node. The
+  bundled example workflow stores it in all four places (three chat nodes and the central
+  settings node), the workflow-upgrade script writes it into the nodes it builds, and the
+  node page lists it under verified models (Qwen 3.5 uses the same ChatML handling as the
+  rest of the Qwen family).
+
+- **Six more chat models in the catalog, including two faster families and a 26B step up.**
+  The LLM dropdown now also offers `gemma-4-26B_q4_0-it.gguf` (13.45 GiB, ★★★★★ — Google's
+  quantization-aware 26B mixture-of-experts with about 4B active parameters, the largest
+  quality step that still fits a 16–24 GiB card), `gemma-4-26B-A4B-it-UD-Q5_K_M.gguf`
+  (19.70 GiB, ★★★★☆), `gemma-4-E4B_q4_0-it.gguf` (4.80 GiB, ★★★★☆) and the fast LFM2.5
+  line: `LFM2.5-8B-A1B-Q4_K_M.gguf` (4.80 GiB, ★★★☆☆, ~1B active parameters per token),
+  `LFM2.5-2.6B-Q4_K_M.gguf` (1.56 GiB, ★★★☆☆) and `LFM2.5-1.2B-Instruct-Q4_K_M.gguf`
+  (0.68 GiB, ★★☆☆☆). Each is pinned to a repository revision, its byte size comes from the
+  repository, the rating carries its reason in `rating_note`, and all of them stay
+  `optional` + `no_auto_download`: the model check reports them, the model selected in the
+  LLM node is the one that is fetched. The Gemma 4 26B/E4B need the `gemma4` architecture in
+  the llama.cpp build and LFM2.5 needs `lfm2` resp. `lfm2moe`; the build this release was
+  tested against knows all three. Sizes and ratings per hardware class: `INSTALLATION.md` §5,
+  README table.
+- **The model dropdown says what is already there.** It offers installed GGUFs and catalog
+  candidates in one list, and until now nothing distinguished them — so choosing a model
+  could start a several-gigabyte download without saying so. Every entry is labelled now:
+  `✔` for a file in `models/llm`, `⬇` with download size and star rating for a catalog model
+  that is not downloaded yet, and the widget line reads `Model - 3 installed, 16 to
+  download`. The labels come from the new read-only route
+  `GET /minimax_music_toolkit/llm/models` and are **display only** — the stored widget value
+  stays the plain file name, so saved workflows keep loading after that download, and no
+  value is rewritten by looking at it. If the inventory cannot be read, the dropdown falls
+  back to plain file names instead of guessing.
+
+- **Fixed: a chat model picked from the catalog could not download at all.** The catalog
+  names the LLM folder once, on the group (`"directory": "models/llm"`); a per-file entry
+  carries none of its own. The model check expands that when it normalizes the group, but
+  the LLM loader handed the *raw* entry to the downloader, which refuses an entry without a
+  target - so selecting a catalog model and queueing ended in
+  `LLM model download failed: entry has no target directory`. The loader now hands over the
+  effective folder (the group's value, with `models/llm` as the documented fallback) and
+  checks it before starting anything; a catalog that names no folder at all fails with a
+  message naming the file and what to add, instead of the downloader's anonymous one.
+- **The LLM check in the model check node is on by default again.** It had been turned off
+  as the guard against a multi-gigabyte download nobody asked for. Since the catalog now
+  marks every chat-model candidate `optional` *and* `no_auto_download`, the check reports
+  which candidates are already present without transferring anything - the model selected in
+  the LLM node is the one that gets fetched. The bundled workflow stores `true`; the
+  tooltip, the node page and `docs/LLM_PROVIDERS.md` describe the new behaviour.
+
 ## [3.1.2] - 2026-09-19
 
 - **A damaged source file is refused before the run starts, with its name in the

@@ -145,11 +145,22 @@ file counts as installed.
 
 These candidates are several gigabytes each, and a run needs at most one of
 them, so the model check (**MiniMaxModelAutodownload**) only reports them and
-never starts that download - the bundled workflows keep `llm_model=false` for
-that reason. Any other llama.cpp-compatible GGUF you place in
+never starts that download - they are marked `optional` and `no_auto_download`
+in the catalog for that reason, and the bundled workflows leave `llm_model` on
+so the report names which of them are already there. Any other
+llama.cpp-compatible GGUF you place in
 `ComfyUI/models/llm/` is offered in the dropdown as well, and is never moved or
 renamed. Which size suits which card is listed in
 [INSTALLATION.md](../INSTALLATION.md#5-local-llm).
+
+The dropdown says which of the two an entry is: **✔** marks a file that is
+already in `ComfyUI/models/llm`, **⬇** a catalog model that is not downloaded
+yet, with its download size and its 1–5 star rating appended. The mark is a label
+only - the value stored in the workflow stays the plain file name, so an existing
+workflow keeps loading after that download, and nothing about a model is
+rewritten by looking at it. If the inventory cannot be read (Python side updated
+while ComfyUI kept running, for instance), the dropdown falls back to the plain
+file names instead of guessing.
 
 ## Keys, sharing and saved workflows
 
@@ -238,10 +249,13 @@ FLUX loaders/sampler/decode branch in your personal workflow as well. Keep the
 cover saver active with `enabled=false` so its empty path reaches the audio
 exports. The switch skips computation; it does not rewrite host validation rules.
 
-The bundled model check now leaves `llm_model=false`: integrated GGUF loading
-already downloads its selected model on demand. This prevents downloading an
-unused GGUF when using a local app or cloud. The Audio Enhancement Lab has no
-LLM or FLUX branch and does not need these controls.
+The bundled model check leaves `llm_model` on: it reports which chat-model
+candidates exist, and the catalog marks every one of them `optional` with
+`no_auto_download`, so checking them starts no download. The model you actually
+select is what gets fetched - by the LLM node, on first use. Turn the check off
+if you use a local app or cloud and do not want the list in the report. The
+Audio Enhancement Lab has no LLM or FLUX branch and does not need these
+controls.
 
 The old **Fresh request / Session ID** helper was removed from the example.
 Loading an older workflow removes the obsolete LLM session input and its wire;
